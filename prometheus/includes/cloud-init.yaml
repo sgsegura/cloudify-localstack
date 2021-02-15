@@ -1,0 +1,67 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - plugin:cloudify-utilities-plugin?version= >=1.22.1
+
+node_templates:
+
+  cloud_init:
+    type: cloudify.nodes.CloudInit.CloudConfig
+    properties:
+      resource_config:
+        users:
+          - name: { get_input: agent_user }
+            primary-group: wheel
+            shell: /bin/bash
+            sudo:
+              - 'ALL=(ALL) NOPASSWD:ALL'
+            ssh-authorized-keys:
+              - { get_attribute: [agent_key, public_key_export] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: agent_key
+
+  agent_key:
+      type: cloudify.keys.nodes.RSAKey
+      properties:
+        resource_config:
+          key_name: { get_input: agent_key_name }
+          openssh_format: true
+        use_secret_store: true
+        use_secrets_if_exist: true
+      interfaces:
+        cloudify.interfaces.lifecycle:
+          create:
+            implementation: keys.cloudify_ssh_key.operations.create
+            inputs:
+              store_private_key_material: true
+
+
+
+#          - name: prometheus-node-exporter
+#            sudo:
+#              - 'ALL=(ALL) NOPASSWD:ALL'
+#            groups: wheel
+#            homedir: /home/prometheus-node-exporter
+#        write_files:
+#          - path: /etc/systemd/system/node_exporter.service
+#            owner: prometheus-node-exporter:wheel
+#            permissions: '0777'
+#            content: |
+#              [Unit]
+#              Description=Node Exporter
+#
+#              [Service]
+#              User=prometheus
+#              ExecStart=/home/prometheus-node-exporter/Prometheus/node_exporter/node_exporter
+#
+#              [Install]
+#              WantedBy=default.target
+#        runcmd:
+#          - cd /home/prometheus-node-exporter/ && curl -LO "https://github.com/prometheus/node_exporter/releases/download/0.11.0/node_exporter-0.11.0.linux-amd64.tar.gz"
+#          - mkdir -p /home/prometheus-node-exporter/Prometheus/node_exporter
+#          - cd /home/prometheus-node-exporter/Prometheus/node_exporter
+#          - tar -xvzf /home/prometheus-node-exporter/node_exporter-0.11.0.linux-amd64.tar.gz
+#          - systemctl daemon-reload
+#          - systemctl enable node_exporter.service
+#          - systemctl start node_exporter.service

@@ -1,0 +1,53 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+description: Install HAProxy on infrastructure.
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - infrastructure--blueprint:private-cloud-vm
+  - plugin:cloudify-ansible-plugin
+
+inputs:
+
+  database_deployment:
+    description: >
+      The deployment ID of an existing deployment.
+      For example, db or private-cloud-db.
+      The following capabilities should be exposed:
+      - endpoints
+    type: string
+    default: private-cloud-db
+
+node_templates:
+
+  haproxy:
+    type: cloudify.nodes.Root
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: infrastructure--host
+        source_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            preconfigure:
+              implementation: ansible.cloudify_ansible.tasks.ansible_requires_host
+              inputs:
+                group_name: balancer
+                host_config:
+                  ansible_host: { get_attribute: [ infrastructure--host, ip ] }
+                  ansible_user: { get_property: [ infrastructure--host, agent_config, user ] }
+                  ansible_ssh_private_key_file: { get_property: [ infrastructure--host, agent_config, key ] }
+                  ansible_become: true
+                  ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        configure:
+          implementation: ansible.cloudify_ansible.tasks.run
+          inputs:
+            run_data:
+              server_list: { get_capability: [ { get_input: database_deployment }, endpoints ] }
+            site_yaml_path: haproxy/playbook.yaml
+            sources: { get_attribute: [ SELF, sources ] }
+
+capabilities:
+
+  endpoint:
+    value: { get_attribute: [ infrastructure--host, ip ] }
