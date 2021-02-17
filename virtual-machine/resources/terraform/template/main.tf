@@ -9,6 +9,7 @@ provider "aws" {
   skip_requesting_account_id = true
   endpoints {
     ec2 = "http://localhost:4566"
+    s3  = "http://localhost:4566"
   }
 }
 
@@ -29,4 +30,8 @@ resource "aws_instance" "example_vm" {
   # Lookup the correct AMI based on the region
   # we specified
   ami = "ami-0eee6eb870dc1cefa"
+}
+
+resource "aws_s3_bucket" "example" {
+  bucket = "my-test-s3-terraform-bucket"
 }
