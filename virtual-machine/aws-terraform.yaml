@@ -20,7 +20,7 @@ inputs:
     type: string
     default:
       key_name: 'mis-regiones'
-      all_my_flavors: [ 'us-east-1' ,'eu-west-1' ]
+      all_my_flavors: [ 'us-east-1', 'eu-west-1' ]
 
   aws_zone_name:
     type: string
